@@ -29,6 +29,7 @@ services:
   - type: web
     name: meme-hall-of-fame-api
     runtime: node
+    plan: free
     rootDir: backend
     buildCommand: npm install
     startCommand: npm start
