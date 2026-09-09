@@ -1,32 +1,29 @@
-# React + TypeScript + Vite
+# Meme Hall of Fame
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+## What it is
 
-Currently, two official plugins are available:
+**Meme Hall of Fame** is a small single-page web app for submitting memes, voting/ranking them, and showcasing a "top three" podium plus a full gallery. It's built with:
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- **React 19** + **TypeScript**
+- **Vite** for the dev server and build
+- **Tailwind CSS** for styling
+- **TanStack Router** for client-side routing (routes for login, the hall-of-fame gallery, adding a meme, and viewing a single meme's detail page)
+- **dnd-kit** for drag-and-drop (reordering/sorting memes)
+- **idb-keyval** (IndexedDB) for local, in-browser persistence — no backend server
+- **oxlint** for linting
 
-## React Compiler
+Key pieces in `src/`: a gallery and podium view (`Gallery.tsx`, `TopThreePodium.tsx`, `HallOfFameBanner.tsx`, `TrophyBadge.tsx`), a form and pending-submissions queue for adding new memes (`AddMemeForm.tsx`, `PendingSubmissions.tsx`), a sortable grid (`SortableMemeGrid.tsx`), and simple local auth/theme context providers (`AuthContext.tsx`, `ThemeContext.tsx`).
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## How it came to be
 
-## Expanding the Oxlint configuration
+This project was built at a hands-on workshop at **KCDC 2026**, where the goal was to learn how to build a website from scratch **using only Claude** — no hand-written boilerplate, no copy-pasting from other tutorials, just prompting Claude (via Claude Code) to scaffold, build, and iterate on a real app. The `PROMPTS.md` file in this repo tracks the prompts used along the way, and `NOTE.md` holds running notes jotted down during the session.
 
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
+## Development
 
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+npm install
+npm run dev      # start the dev server
+npm run build     # type-check and build for production
+npm run preview   # preview the production build
+npm run lint       # run oxlint
 ```
-
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
