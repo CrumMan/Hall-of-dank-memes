@@ -44,7 +44,7 @@ const memeDetailRoute = createRoute({
 
 const routeTree = rootRoute.addChildren([hallOfFameRoute, addMemeRoute, loginRoute, memeDetailRoute]);
 
-export const router = createRouter({ routeTree });
+export const router = createRouter({ routeTree, basepath: '/Hall-of-dank-memes/' });
 
 declare module "@tanstack/react-router" {
   interface Register {

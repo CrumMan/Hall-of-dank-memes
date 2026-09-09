@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Hall of Fame</title>
+    <!--
+      GitHub Pages has no server-side rewrites, so a hard refresh or direct
+      link on a client-side route (e.g. /add, /meme/123) hits this 404 page.
+      Encode the path into a query string and redirect to index.html, which
+      decodes it back before the app boots. Based on the well-known
+      rafgraph/spa-github-pages technique.
+    -->
+    <script>
+      var basePath = '/Hall-of-dank-memes/';
+      var path = location.pathname.slice(basePath.length);
+      location.replace(
+        basePath + '?redirect=' + encodeURIComponent(path + location.search + location.hash)
+      );
+    </script>
+  </head>
+  <body></body>
+</html>

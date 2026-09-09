@@ -8,6 +8,17 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      // Decode a path redirected here by 404.html (see public/404.html) and
+      // restore it via history.replaceState before the router boots.
+      (function () {
+        var params = new URLSearchParams(location.search);
+        var redirect = params.get('redirect');
+        if (redirect) {
+          history.replaceState(null, '', '/Hall-of-dank-memes/' + redirect);
+        }
+      })();
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
