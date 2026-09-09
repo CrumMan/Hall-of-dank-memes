@@ -1,0 +1,32 @@
+@import "tailwindcss";
+
+/* Make `dark:` respond to a manually-toggled `.dark` class on <html>,
+   instead of only the OS `prefers-color-scheme`. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  color-scheme: light;
+}
+
+:root.dark {
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  background: #fdf6ec;
+  color: #1c1917;
+  font-family: system-ui, "Segoe UI", Roboto, sans-serif;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+:root.dark body {
+  background: #0b0a08;
+  color: #f5efe0;
+}
+
+#root {
+  min-height: 100svh;
+}
