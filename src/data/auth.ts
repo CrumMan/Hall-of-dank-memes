@@ -1,66 +1,9 @@
-import { createUser, getUser } from "./storage";
-
-// Hardcoded backdoor admin account. Deliberately kept OUT of the "users"
-// IndexedDB store — signup rejects this email, and admin status is always
-// derived by comparing against these constants, never read from a stored
-// per-user "role" field. That closes off the obvious self-promotion path
-// (editing your own user record to say role: "admin"), but read the caveat
-// in AuthContext.tsx: this is still a client-only app with no server, so
-// none of this is real security against someone editing JS/devtools state.
-const ADMIN_EMAIL = "admin@admin.com";
-const ADMIN_PASSWORD = "Admin123123";
+import { supabase } from "../lib/supabaseClient";
 
 export interface Session {
+  userId: string;
   email: string;
   isAdmin: boolean;
-}
-
-const SESSION_KEY = "kcdc2026-session-email";
-
-export function readStoredEmail(): string | null {
-  try {
-    return sessionStorage.getItem(SESSION_KEY);
-  } catch {
-    return null;
-  }
-}
-
-export function writeStoredEmail(email: string | null): void {
-  try {
-    if (email) sessionStorage.setItem(SESSION_KEY, email);
-    else sessionStorage.removeItem(SESSION_KEY);
-  } catch {
-    // sessionStorage unavailable (private mode, etc.) — session just won't
-    // survive a reload.
-  }
-}
-
-/** True if a session is stored. Used by route guards, which run outside React. */
-export function hasStoredSession(): boolean {
-  return readStoredEmail() !== null;
-}
-
-export function normalizeEmail(email: string): string {
-  return email.trim().toLowerCase();
-}
-
-export function isAdminEmail(email: string): boolean {
-  return normalizeEmail(email) === ADMIN_EMAIL;
-}
-
-async function hash(password: string, salt: string): Promise<string> {
-  const data = new TextEncoder().encode(`${salt}:${password}`);
-  const digest = await crypto.subtle.digest("SHA-256", data);
-  return Array.from(new Uint8Array(digest))
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
-}
-
-function randomSalt(): string {
-  const bytes = crypto.getRandomValues(new Uint8Array(16));
-  return Array.from(bytes)
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
 }
 
 export interface AuthResult {
@@ -69,8 +12,41 @@ export interface AuthResult {
   session?: Session;
 }
 
+/**
+ * Admin status is never taken from anything the client can influence — it's
+ * read fresh from the `profiles` table (set by hand via SQL, see
+ * supabase/schema.sql) every time a session is built. Row Level Security on
+ * `profiles` only lets a user read their own row, and only the backend API
+ * (backend/) can write role-gated changes, so there's no path for a user to
+ * self-promote by editing client state.
+ */
+async function fetchIsAdmin(userId: string): Promise<boolean> {
+  const { data, error } = await supabase.from("profiles").select("role").eq("id", userId).single();
+  if (error || !data) return false;
+  return data.role === "admin";
+}
+
+export async function sessionFromSupabaseUser(user: {
+  id: string;
+  email?: string;
+}): Promise<Session> {
+  return {
+    userId: user.id,
+    email: user.email ?? "",
+    isAdmin: await fetchIsAdmin(user.id),
+  };
+}
+
+export async function getSession(): Promise<Session | null> {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  if (!session?.user) return null;
+  return sessionFromSupabaseUser(session.user);
+}
+
 export async function signUp(emailInput: string, password: string): Promise<AuthResult> {
-  const email = normalizeEmail(emailInput);
+  const email = emailInput.trim().toLowerCase();
 
   if (!email || !email.includes("@")) {
     return { ok: false, error: "Enter a valid email." };
@@ -78,38 +54,27 @@ export async function signUp(emailInput: string, password: string): Promise<Auth
   if (password.length < 6) {
     return { ok: false, error: "Password must be at least 6 characters." };
   }
-  if (isAdminEmail(email)) {
-    return { ok: false, error: "That email is reserved." };
-  }
-  if (await getUser(email)) {
-    return { ok: false, error: "An account with that email already exists." };
+
+  const { data, error } = await supabase.auth.signUp({ email, password });
+  if (error) return { ok: false, error: error.message };
+  if (!data.user) {
+    return { ok: false, error: "Check your inbox to confirm your email, then log in." };
   }
 
-  const salt = randomSalt();
-  const passwordHash = await hash(password, salt);
-  await createUser({ email, salt, passwordHash, createdAt: Date.now() });
-
-  return { ok: true, session: { email, isAdmin: false } };
+  return { ok: true, session: await sessionFromSupabaseUser(data.user) };
 }
 
 export async function logIn(emailInput: string, password: string): Promise<AuthResult> {
-  const email = normalizeEmail(emailInput);
+  const email = emailInput.trim().toLowerCase();
 
-  if (isAdminEmail(email)) {
-    return password === ADMIN_PASSWORD
-      ? { ok: true, session: { email, isAdmin: true } }
-      : { ok: false, error: "Incorrect email or password." };
-  }
-
-  const user = await getUser(email);
-  if (!user) {
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error || !data.user) {
     return { ok: false, error: "Incorrect email or password." };
   }
 
-  const attempt = await hash(password, user.salt);
-  if (attempt !== user.passwordHash) {
-    return { ok: false, error: "Incorrect email or password." };
-  }
+  return { ok: true, session: await sessionFromSupabaseUser(data.user) };
+}
 
-  return { ok: true, session: { email, isAdmin: false } };
+export async function logOut(): Promise<void> {
+  await supabase.auth.signOut();
 }

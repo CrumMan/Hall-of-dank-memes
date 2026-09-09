@@ -1,57 +1,72 @@
-import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { supabase } from "../lib/supabaseClient";
 import * as auth from "./auth";
 import type { Session } from "./auth";
 
-// We only ever persist the email, never an "isAdmin" flag. isAdmin is always
-// re-derived by comparing the email against the hardcoded admin address, so
-// there's nothing here that can be self-promoted by editing stored data —
-// only by logging in with the actual admin credentials.
-//
-// CAVEAT: this is still a client-only app with no server. Anyone can open
-// devtools and rewrite this session, the auth module, or the sessionStorage
-// value directly. This gate is a UI convenience for a small personal
-// project, not real access control — never rely on it to protect anything
-// sensitive or to gate a real multi-user deployment.
-function toSession(email: string | null): Session | null {
-  if (!email) return null;
-  return { email, isAdmin: auth.isAdminEmail(email) };
-}
-
 interface AuthContextValue {
   session: Session | null;
+  loading: boolean;
   logIn: (email: string, password: string) => Promise<auth.AuthResult>;
   signUp: (email: string, password: string) => Promise<auth.AuthResult>;
-  logOut: () => void;
+  logOut: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [email, setEmail] = useState<string | null>(() => auth.readStoredEmail());
+  const [session, setSession] = useState<Session | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  function persist(newEmail: string | null) {
-    setEmail(newEmail);
-    auth.writeStoredEmail(newEmail);
-  }
+  useEffect(() => {
+    let cancelled = false;
+
+    auth.getSession().then((s) => {
+      if (!cancelled) {
+        setSession(s);
+        setLoading(false);
+      }
+    });
+
+    // Keeps the session (and admin role) in sync across tabs, token
+    // refreshes, and sign-in/out triggered elsewhere.
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      if (!newSession?.user) {
+        setSession(null);
+        return;
+      }
+      auth.sessionFromSupabaseUser(newSession.user).then((s) => {
+        if (!cancelled) setSession(s);
+      });
+    });
+
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
+    };
+  }, []);
 
   const value = useMemo<AuthContextValue>(
     () => ({
-      session: toSession(email),
-      async logIn(rawEmail, password) {
-        const result = await auth.logIn(rawEmail, password);
-        if (result.ok && result.session) persist(result.session.email);
+      session,
+      loading,
+      async logIn(email, password) {
+        const result = await auth.logIn(email, password);
+        if (result.ok && result.session) setSession(result.session);
         return result;
       },
-      async signUp(rawEmail, password) {
-        const result = await auth.signUp(rawEmail, password);
-        if (result.ok && result.session) persist(result.session.email);
+      async signUp(email, password) {
+        const result = await auth.signUp(email, password);
+        if (result.ok && result.session) setSession(result.session);
         return result;
       },
-      logOut() {
-        persist(null);
+      async logOut() {
+        await auth.logOut();
+        setSession(null);
       },
     }),
-    [email],
+    [session, loading],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

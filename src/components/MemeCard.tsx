@@ -1,5 +1,4 @@
 import { Link } from "@tanstack/react-router";
-import { useObjectUrl } from "../lib/objectUrls";
 import type { Meme } from "../data/types";
 import { TrophyBadge } from "./TrophyBadge";
 
@@ -18,19 +17,17 @@ export function MemeCard({
   reordering = false,
   dragHandleProps,
 }: MemeCardProps) {
-  const url = useObjectUrl(meme.blob);
-
-  const media = url ? (
+  const media =
     meme.type === "photo" ? (
       <img
-        src={url}
+        src={meme.mediaUrl}
         alt={meme.title}
         className="h-full w-full object-cover"
         draggable={false}
       />
     ) : (
       <video
-        src={url}
+        src={meme.mediaUrl}
         className="h-full w-full object-cover"
         muted
         loop
@@ -38,8 +35,7 @@ export function MemeCard({
         autoPlay
         draggable={false}
       />
-    )
-  ) : null;
+    );
 
   const cardClasses = [
     "relative aspect-square transition",

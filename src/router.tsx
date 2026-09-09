@@ -1,5 +1,5 @@
 import { createRootRoute, createRoute, createRouter, redirect } from "@tanstack/react-router";
-import { hasStoredSession } from "./data/auth";
+import { supabase } from "./lib/supabaseClient";
 import { RootLayout } from "./routes/RootLayout";
 import { HallOfFameRoute } from "./routes/HallOfFameRoute";
 import { AddMemeRoute } from "./routes/AddMemeRoute";
@@ -19,8 +19,11 @@ const hallOfFameRoute = createRoute({
 const addMemeRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/add",
-  beforeLoad: () => {
-    if (!hasStoredSession()) {
+  beforeLoad: async () => {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    if (!session) {
       throw redirect({ to: "/login" });
     }
   },
@@ -44,7 +47,10 @@ const memeDetailRoute = createRoute({
 
 const routeTree = rootRoute.addChildren([hallOfFameRoute, addMemeRoute, loginRoute, memeDetailRoute]);
 
-export const router = createRouter({ routeTree, basepath: '/Hall-of-dank-memes/' });
+// import.meta.env.BASE_URL always matches whatever `base` vite.config.ts
+// built with, so this stays correct on both GitHub Pages (subpath) and
+// Render (domain root) without hardcoding either one here.
+export const router = createRouter({ routeTree, basepath: import.meta.env.BASE_URL });
 
 declare module "@tanstack/react-router" {
   interface Register {

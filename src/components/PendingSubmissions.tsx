@@ -1,5 +1,4 @@
 import { Link } from "@tanstack/react-router";
-import { useObjectUrl } from "../lib/objectUrls";
 import type { Meme } from "../data/types";
 
 interface PendingSubmissionsProps {
@@ -32,17 +31,15 @@ function PendingRow({
   onApprove: (id: string) => void;
   onReject: (id: string) => void;
 }) {
-  const url = useObjectUrl(meme.blob);
-
   return (
     <div className="flex items-center gap-3 rounded-xl bg-white p-3 shadow ring-1 ring-neutral-200 dark:bg-neutral-900 dark:ring-0">
       <Link to="/meme/$id" params={{ id: meme.id }} className="flex min-w-0 flex-1 items-center gap-3">
         <div className="h-16 w-16 shrink-0 overflow-hidden rounded-lg bg-neutral-200 dark:bg-neutral-800">
-          {url && meme.type === "photo" && (
-            <img src={url} alt={meme.title} className="h-full w-full object-cover" />
+          {meme.type === "photo" && (
+            <img src={meme.mediaUrl} alt={meme.title} className="h-full w-full object-cover" />
           )}
-          {url && meme.type === "video" && (
-            <video src={url} className="h-full w-full object-cover" muted />
+          {meme.type === "video" && (
+            <video src={meme.mediaUrl} className="h-full w-full object-cover" muted />
           )}
         </div>
         <div className="min-w-0 flex-1">

@@ -4,8 +4,7 @@ export type MemeStatus = "approved" | "pending";
 export interface Meme {
   id: string;
   type: MemeType;
-  blob: Blob;
-  mimeType: string;
+  mediaUrl: string;
   title: string;
   categories: string[];
   status: MemeStatus;
@@ -14,11 +13,4 @@ export interface Meme {
   createdAt: number;
 }
 
-export type MemeInput = Pick<Meme, "type" | "blob" | "mimeType" | "title" | "categories">;
-
-export interface User {
-  email: string;
-  salt: string;
-  passwordHash: string;
-  createdAt: number;
-}
+export type MemeInput = Pick<Meme, "type" | "title" | "categories"> & { file: File };

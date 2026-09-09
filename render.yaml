@@ -1,0 +1,43 @@
+# Render Blueprint — connect this repo as a Blueprint in the Render
+# dashboard (New → Blueprint) and it provisions both services below.
+#
+# Env vars marked `sync: false` aren't set here — after the first deploy,
+# fill them in under each service's Environment tab in the Render dashboard.
+
+services:
+  # Frontend — static site. Served from this service's own Render subdomain
+  # (not a subpath), so it builds with the default base of "/".
+  - type: web
+    name: meme-hall-of-fame-web
+    runtime: static
+    rootDir: .
+    buildCommand: npm ci && npm run build
+    staticPublishPath: dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_SUPABASE_URL
+        sync: false
+      - key: VITE_SUPABASE_ANON_KEY
+        sync: false
+      - key: VITE_API_URL
+        sync: false # set to the API service's URL below once it's deployed
+
+  # Backend — small Express API for admin-only meme mutations. See backend/README.md.
+  - type: web
+    name: meme-hall-of-fame-api
+    runtime: node
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: DATABASE_URL
+        sync: false # Supabase Settings → Database → Session pooler connection string
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: CORS_ORIGIN
+        sync: false # the frontend service's URL, once deployed

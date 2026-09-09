@@ -72,12 +72,15 @@ export function AddMemeForm() {
       await addMeme(
         {
           type: fileType,
-          blob: file,
-          mimeType: file.type,
+          file,
           title: title.trim(),
           categories: categoryResult.categories,
         },
-        { submittedBy: session.email, autoApprove: session.isAdmin },
+        {
+          submittedBy: session.email,
+          submittedById: session.userId,
+          autoApprove: session.isAdmin,
+        },
       );
       navigate({ to: "/" });
     } finally {

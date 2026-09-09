@@ -1,9 +1,8 @@
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useAuth } from "../data/AuthContext";
-import { getMeme } from "../data/storage";
+import { getMeme } from "../data/memes";
 import { useMemes } from "../data/useMemes";
-import { useObjectUrl } from "../lib/objectUrls";
 import { validateCategories, validateTitle } from "../lib/validate";
 import type { Meme } from "../data/types";
 
@@ -15,7 +14,6 @@ export function MemeDetailRoute({ id }: { id: string }) {
   const { session } = useAuth();
   const { remove, approve, edit } = useMemes();
   const navigate = useNavigate();
-  const url = useObjectUrl(meme?.blob);
 
   const [editing, setEditing] = useState(false);
   const [editTitle, setEditTitle] = useState("");
@@ -90,11 +88,11 @@ export function MemeDetailRoute({ id }: { id: string }) {
   return (
     <div className="mx-auto mt-10 max-w-2xl px-4 pb-16">
       <div className="overflow-hidden rounded-2xl bg-white shadow-lg ring-1 ring-neutral-200 dark:bg-neutral-900 dark:ring-0">
-        {url && meme.type === "photo" && (
-          <img src={url} alt={meme.title} className="max-h-[70vh] w-full object-contain" />
+        {meme.type === "photo" && (
+          <img src={meme.mediaUrl} alt={meme.title} className="max-h-[70vh] w-full object-contain" />
         )}
-        {url && meme.type === "video" && (
-          <video src={url} controls className="max-h-[70vh] w-full" />
+        {meme.type === "video" && (
+          <video src={meme.mediaUrl} controls className="max-h-[70vh] w-full" />
         )}
 
         {meme.status === "pending" && (
