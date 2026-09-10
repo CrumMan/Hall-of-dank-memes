@@ -58,14 +58,11 @@ export function MemeCard({
           <p className="truncate text-sm font-medium text-amber-50">{meme.title}</p>
           {meme.categories && meme.categories.length > 0 && (
             <div className="mt-1 flex flex-wrap gap-1">
-              {meme.categories.map((cat) => (
-                <span
-                  key={cat}
-                  className="inline-block truncate rounded-full bg-amber-500/20 px-2 py-0.5 text-[11px] font-semibold text-amber-300 ring-1 ring-amber-500/40"
-                >
-                  {cat}
-                </span>
-              ))}
+              {/* Card view only ever shows the first category — the rest are
+                  visible on the meme's detail page (MemeDetailRoute). */}
+              <span className="inline-block truncate rounded-full bg-amber-500/20 px-2 py-0.5 text-[11px] font-semibold text-amber-300 ring-1 ring-amber-500/40">
+                {meme.categories[0]}
+              </span>
             </div>
           )}
         </div>
