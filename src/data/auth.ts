@@ -57,18 +57,29 @@ export async function signUp(emailInput: string, password: string): Promise<Auth
 
   const { data, error } = await supabase.auth.signUp({ email, password });
   if (error) return { ok: false, error: error.message };
-  if (!data.user) {
+
+  // When "Confirm email" is on, signUp returns a user but no session — the
+  // account exists but isn't logged in yet. Checking data.user here instead
+  // of data.session used to report success anyway, which briefly looked
+  // logged in until the next real session check found nothing and reverted.
+  if (!data.session) {
     return { ok: false, error: "Check your inbox to confirm your email, then log in." };
   }
 
-  return { ok: true, session: await sessionFromSupabaseUser(data.user) };
+  return { ok: true, session: await sessionFromSupabaseUser(data.user!) };
 }
 
 export async function logIn(emailInput: string, password: string): Promise<AuthResult> {
   const email = emailInput.trim().toLowerCase();
 
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-  if (error || !data.user) {
+  if (error) {
+    if (error.message.toLowerCase().includes("email not confirmed")) {
+      return { ok: false, error: "Please confirm your email (check your inbox) before logging in." };
+    }
+    return { ok: false, error: "Incorrect email or password." };
+  }
+  if (!data.user) {
     return { ok: false, error: "Incorrect email or password." };
   }
 
