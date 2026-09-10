@@ -16,6 +16,13 @@ app.get("/health", (_req, res) => {
   res.json({ ok: true });
 });
 
+// Temporary diagnostic — shows exactly what CORS_ORIGIN parsed to on the
+// live server, and what origin the request itself carried. Not sensitive,
+// safe to leave public short-term; remove once the CORS mismatch is sorted.
+app.get("/debug/cors", (req, res) => {
+  res.json({ allowedOrigins, requestOrigin: req.headers.origin ?? null });
+});
+
 // Approve a pending meme. sort_order is filled in by a DB trigger — see
 // supabase/002_admin_and_ordering.sql — so it always lands at the end of
 // the approved order without a race between two admins approving at once.
