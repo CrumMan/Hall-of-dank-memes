@@ -70,20 +70,58 @@ app.delete("/api/memes/:id", requireUser, requireAdmin, async (req, res) => {
   res.json({ ok: true });
 });
 
-// Any logged-in user can reorder (matches the original app's behavior) —
-// not admin-gated like the routes above.
+// Any logged-in user can vote (matches the original app's reorder-by-drag
+// behavior) — not admin-gated like the routes above.
+//
+// Dragging is now a top-3 ranked ballot rather than a direct reorder: the
+// first 3 ids get 3/2/1 points, everything past that gets none. Re-voting
+// replaces the caller's previous ballot (see supabase/003_voting.sql) —
+// their points move to whichever memes they rank now, they don't add up
+// across repeated drags. The hall-of-fame order is then recomputed from
+// every user's total points, with ties keeping their existing order so
+// memes nobody has ranked don't jump around.
 app.post("/api/memes/reorder", requireUser, async (req, res) => {
   const { orderedIds } = req.body ?? {};
   if (!Array.isArray(orderedIds) || orderedIds.length === 0) {
     return res.status(400).json({ error: "orderedIds must be a non-empty array." });
   }
 
+  const ballot = orderedIds.slice(0, 3).map((id, index) => ({ id, points: 3 - index }));
+
   const client = await pool.connect();
   try {
     await client.query("begin");
-    for (let index = 0; index < orderedIds.length; index++) {
-      await client.query("update memes set sort_order = $2 where id = $1", [orderedIds[index], index]);
+
+    await client.query("delete from meme_votes where voter_id = $1", [req.user.id]);
+    for (const { id, points } of ballot) {
+      // Only inserts for memes that actually exist and are approved — a
+      // stale/tampered id in the payload is silently skipped rather than
+      // failing the whole vote.
+      await client.query(
+        `insert into meme_votes (meme_id, voter_id, points)
+         select $1, $2, $3 where exists (
+           select 1 from memes where id = $1 and status = 'approved'
+         )`,
+        [id, req.user.id, points],
+      );
     }
+
+    await client.query(`
+      with totals as (
+        select m.id, coalesce(sum(v.points), 0) as total_votes, m.sort_order as old_order
+        from memes m
+        left join meme_votes v on v.meme_id = m.id
+        where m.status = 'approved'
+        group by m.id, m.sort_order
+      ), ranked as (
+        select id, row_number() over (order by total_votes desc, old_order asc) - 1 as new_order
+        from totals
+      )
+      update memes set sort_order = ranked.new_order
+      from ranked
+      where memes.id = ranked.id
+    `);
+
     await client.query("commit");
   } catch (err) {
     await client.query("rollback");
