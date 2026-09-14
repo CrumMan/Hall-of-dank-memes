@@ -43,7 +43,12 @@ export function useMemes() {
 
   const reorder = useCallback(
     async (orderedIds: string[]) => {
-      // Optimistic update so the UI reflects the drop immediately.
+      // Optimistic update so the drag itself feels immediate. This is only
+      // a guess, though: the backend now treats the drag as a top-3 vote
+      // (see backend/src/server.js) and recomputes everyone's order from
+      // the combined totals, which can land differently than "drop it
+      // exactly where I dragged it" — especially past the top 3. Reload
+      // once the vote lands so the list settles on the real order.
       setMemes((prev) => {
         const byId = new Map(prev.map((m) => [m.id, m]));
         const reordered = orderedIds
@@ -56,8 +61,9 @@ export function useMemes() {
         return [...reordered, ...untouched];
       });
       await memesApi.updateOrder(orderedIds);
+      await reload();
     },
-    [],
+    [reload],
   );
 
   const approve = useCallback(
